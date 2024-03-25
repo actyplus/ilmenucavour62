@@ -1,8 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     fetch('https://actyplus.github.io/ilmenucavour62/database.csv')
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
     .then(data => {
+        console.log('CSV data:', data); // Stampiamo i dati per vedere se il fetch ha funzionato
         const jsonData = csvToJSON(data);
+        console.log('JSON data:', jsonData); // Stampiamo il JSON per vedere se il parsing ha funzionato
         populateMenu(jsonData);
     })
     .catch(error => console.error('Error loading the CSV data:', error));
