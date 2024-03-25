@@ -7,37 +7,62 @@ function fetchCSVAndDisplay(url, containerId) {
     .then(response => response.text())
     .then(csvText => {
         const jsonData = csvToJSON(csvText);
-        populateMenu(jsonData, containerId);
+        const groupedData = groupBySection(jsonData);
+        populateMenu(groupedData, containerId);
     })
     .catch(error => console.error('Error fetching or converting the CSV:', error));
 }
 
 function csvToJSON(csvText) {
-    const lines = csvText.split('\n');
-    const keys = lines[0].split(',').map(key => key.trim());
+    const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
+    const headers = lines[0].split(',').map(header => header.trim());
     return lines.slice(1).map(line => {
-        const values = line.split(',').map(value => value.trim().replace(/^"(.*)"$/, '$1'));
-        return keys.reduce((object, key, index) => {
-            object[key] = values[index];
-            return object;
+        const values = line.split(',').map(value => value.trim().replace(/^"|"$/g, ''));
+        return headers.reduce((obj, header, index) => {
+            obj[header] = values[index];
+            return obj;
         }, {});
     });
 }
 
-function populateMenu(items, containerId) {
+function groupBySection(items) {
+    return items.reduce((acc, item) => {
+        (acc[item['Sezione']] = acc[item['Sezione']] || []).push(item);
+        return acc;
+    }, {});
+}
+
+function populateMenu(groupedItems, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
 
-    items.forEach(item => {
-        const productDiv = document.createElement('div');
-        productDiv.className = 'product';
+    Object.keys(groupedItems).forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'section';
 
-        ['Sezione', 'Prodotto', 'Prezzo', 'Descrizione'].forEach(key => {
-            const span = document.createElement('span');
-            span.textContent = item[key];
-            productDiv.appendChild(span);
+        const sectionTitle = document.createElement('h2');
+        sectionTitle.textContent = section;
+        sectionDiv.appendChild(sectionTitle);
+
+        groupedItems[section].forEach(item => {
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = item['Prodotto'];
+            productDiv.appendChild(nameSpan);
+
+            const priceSpan = document.createElement('span');
+            priceSpan.textContent = item['Prezzo'];
+            productDiv.appendChild(priceSpan);
+
+            const descSpan = document.createElement('span');
+            descSpan.textContent = item['Descrizione'];
+            productDiv.appendChild(descSpan);
+
+            sectionDiv.appendChild(productDiv);
         });
 
-        container.appendChild(productDiv);
+        container.appendChild(sectionDiv);
     });
 }
