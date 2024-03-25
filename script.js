@@ -1,33 +1,59 @@
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('https://actyplus.github.io/ilmenucavour62/database.csv')
-    .then(response => response.text())
-    .then(csvText => {
-        const jsonData = csvToJson(csvText);
-        console.log(jsonData);
-    })
-    .catch(error => console.error('Error fetching or parsing CSV:', error));
+    fetchCSVAndDisplay('https://actyplus.github.io/ilmenucavour62/database.csv', 'menu-container');
 });
 
-function csvToJson(csv) {
-    const lines = csv.split('\n');
-    const result = [];
-    const headers = lines[0].split(',');
-
-    for(let i = 1; i < lines.length; i++) {
-        let obj = {};
-        const currentline = lines[i].split(',');
-
-        for(let j = 0; j < headers.length; j++){
-            obj[headers[j].trim()] = currentline[j] && currentline[j].trim();
-        }
-        result.push(obj);
-    }
-
-    return result; // This will be an array of objects
+function fetchCSVAndDisplay(url, containerId) {
+    fetch(url)
+    .then(response => response.text())
+    .then(csvText => {
+        const jsonData = csvToJSON(csvText);
+        populateMenu(jsonData, containerId);
+    })
+    .catch(error => console.error('Error fetching or converting the CSV:', error));
 }
 
-// Helper function to handle any text transformations if necessary
-function transformText(text) {
-    // You can add any specific transformations you need to handle here
-    return text;
+function csvToJSON(csvText) {
+    const lines = csvText.split('\n');
+    const keys = lines[0].split(',').map(key => key.trim());
+    // Skip empty lines and headers
+    return lines.slice(1).filter(line => line).map(line => {
+        const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(value => value.trim().replace(/^"|"$/g, ''));
+        return keys.reduce((object, key, index) => {
+            object[key] = values[index];
+            return object;
+        }, {});
+    });
+}
+
+function populateMenu(items, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = ''; // Clear the container
+
+    items.forEach(item => {
+        if (item.Prodotto && item.Sezione !== '') { // Check if the row is a product entry
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product';
+            
+            const nameElement = document.createElement('h3');
+            nameElement.textContent = item.Prodotto;
+            productDiv.appendChild(nameElement);
+
+            const priceElement = document.createElement('p');
+            priceElement.textContent = item.Prezzo;
+            productDiv.appendChild(priceElement);
+
+            const descriptionElement = document.createElement('p');
+            descriptionElement.textContent = item.Descrizione;
+            productDiv.appendChild(descriptionElement);
+
+            if (item.LinkImmagine) {
+                const imageElement = document.createElement('img');
+                imageElement.src = item.LinkImmagine;
+                imageElement.alt = item.Prodotto;
+                productDiv.appendChild(imageElement);
+            }
+
+            container.appendChild(productDiv);
+        }
+    });
 }
