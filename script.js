@@ -9,18 +9,42 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => console.error('Errore durante il caricamento del CSV:', error));
 });
 
-function csvToArray(str, delimiter = ",") {
-  const headers = str.slice(0, str.indexOf("\n")).split(delimiter);
-  const rows = str.slice(str.indexOf("\n") + 1).split("\n");
+// Funzione aggiornata per gestire i campi con virgolette correttamente
+function csvToJSON(csvString) {
+    const rows = csvString.split('\n');
+    const jsonArray = [];
 
-  const arr = rows.map(function (row) {
-    const values = row.split(delimiter);
-    const el = headers.reduce(function (object, header, index) {
-      object[header] = values[index];
-      return object;
-    }, {});
-    return el;
-  });
+    // Estrai le intestazioni (headers)
+    const headers = rows[0].split(',');
+    for (let i = 1; i < rows.length; i++) {
+        const row = [];
+        let current = '';
+        let inQuotes = false;
 
-  return arr;
+        // Scorri ogni carattere della riga per gestire le virgolette
+        for (let char of rows[i]) {
+            if (char === '"' && inQuotes) {
+                inQuotes = false;
+            } else if (char === '"' && !inQuotes) {
+                inQuotes = true;
+            } else if (char === ',' && !inQuotes) {
+                row.push(current);
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        if (current.length > 0) {
+            row.push(current); // Aggiungi l'ultimo campo alla riga
+        }
+
+        // Crea un oggetto JSON per la riga, utilizzando le intestazioni
+        const obj = headers.reduce((acc, header, idx) => {
+            acc[header.trim()] = (row[idx] || "").trim().replace(/\"/g, "");
+            return acc;
+        }, {});
+
+        jsonArray.push(obj);
+    }
+    return jsonArray;
 }
