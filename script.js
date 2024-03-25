@@ -1,68 +1,64 @@
 document.addEventListener('DOMContentLoaded', function() {
-    fetchCSVAndDisplay('https://actyplus.github.io/ilmenucavour62/database.csv', 'menu-container');
+    fetch('https://actyplus.github.io/ilmenucavour62/database.csv')
+    .then(response => response.text())
+    .then(csv => {
+        let data = parseCSV(csv);
+        displayMenu(data);
+    })
+    .catch(error => console.error('Errore nel caricamento del CSV:', error));
 });
 
-function fetchCSVAndDisplay(url, containerId) {
-    fetch(url)
-    .then(response => response.text())
-    .then(csvText => {
-        const jsonData = csvToJSON(csvText);
-        const groupedData = groupBySection(jsonData);
-        populateMenu(groupedData, containerId);
-    })
-    .catch(error => console.error('Error fetching or converting the CSV:', error));
+function parseCSV(csv) {
+    let lines = csv.split('\n');
+    let headers = lines[0].split(',');
+    let result = lines.slice(1).map(line => {
+        let values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+        if(values) {
+            let object = {};
+            headers.forEach((header, i) => {
+                object[header.trim()] = values[i].trim().replace(/^"|"$/g, '');
+            });
+            return object;
+        }
+        return null;
+    }).filter(Boolean);
+    return result;
 }
 
-function csvToJSON(csvText) {
-    const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
-    const headers = lines[0].split(',').map(header => header.trim());
-    return lines.slice(1).map(line => {
-        const values = line.split(',').map(value => value.trim().replace(/^"|"$/g, ''));
-        return headers.reduce((obj, header, index) => {
-            obj[header] = values[index];
-            return obj;
-        }, {});
+function displayMenu(data) {
+    let menu = document.getElementById('menu-container');
+    let categories = {};
+
+    data.forEach(item => {
+        if(!categories[item.Sezione]) {
+            categories[item.Sezione] = [];
+        }
+        categories[item.Sezione].push(item);
     });
-}
 
-function groupBySection(items) {
-    return items.reduce((acc, item) => {
-        (acc[item['Sezione']] = acc[item['Sezione']] || []).push(item);
-        return acc;
-    }, {});
-}
+    Object.keys(categories).forEach(category => {
+        let categoryDiv = document.createElement('div');
+        let categoryTitle = document.createElement('h2');
+        categoryTitle.textContent = category;
+        categoryDiv.appendChild(categoryTitle);
 
-function populateMenu(groupedItems, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
+        categories[category].forEach(item => {
+            let itemDiv = document.createElement('div');
+            let itemName = document.createElement('span');
+            let itemPrice = document.createElement('span');
+            let itemDesc = document.createElement('span');
 
-    Object.keys(groupedItems).forEach(section => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'section';
+            itemName.textContent = item.Prodotto;
+            itemPrice.textContent = item.Prezzo;
+            itemDesc.textContent = item.Descrizione;
 
-        const sectionTitle = document.createElement('h2');
-        sectionTitle.textContent = section;
-        sectionDiv.appendChild(sectionTitle);
+            itemDiv.appendChild(itemName);
+            itemDiv.appendChild(itemPrice);
+            itemDiv.appendChild(itemDesc);
 
-        groupedItems[section].forEach(item => {
-            const productDiv = document.createElement('div');
-            productDiv.className = 'product';
-
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = item['Prodotto'];
-            productDiv.appendChild(nameSpan);
-
-            const priceSpan = document.createElement('span');
-            priceSpan.textContent = item['Prezzo'];
-            productDiv.appendChild(priceSpan);
-
-            const descSpan = document.createElement('span');
-            descSpan.textContent = item['Descrizione'];
-            productDiv.appendChild(descSpan);
-
-            sectionDiv.appendChild(productDiv);
+            categoryDiv.appendChild(itemDiv);
         });
 
-        container.appendChild(sectionDiv);
+        menu.appendChild(categoryDiv);
     });
 }
