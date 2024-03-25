@@ -8,30 +8,41 @@ document.addEventListener('DOMContentLoaded', function() {
     .catch(error => console.error('Error loading the CSV data:', error));
 });
 
+// Funzione aggiornata per gestire i campi con virgole
 function csvToJSON(csvString) {
-    // Questa funzione trasforma il CSV in un array di oggetti JSON.
-    // La implementazione esatta può variare in base al formato esatto del tuo CSV.
     const rows = csvString.split('\n');
     const jsonArray = [];
-    const headers = rows[0].split(',');
 
+    // Salta l'intestazione e gestisci le righe
     for (let i = 1; i < rows.length; i++) {
-        const rowData = rows[i].split(',');
-        const obj = {};
-        for (let j = 0; j < headers.length; j++) {
-            obj[headers[j].trim()] = rowData[j].trim();
+        const row = [];
+        let match;
+        // Regex per riconoscere campi con virgole tra virgolette
+        const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+        while (match = regex.exec(rows[i])) {
+            row.push(match[0].replace(/\"/g, ""));
         }
-        jsonArray.push(obj);
+        if (row.length > 0) {
+            const obj = {
+                Sezione: row[0],
+                Prodotto: row[1],
+                Prezzo: row[2],
+                Descrizione: row[3],
+                LinkImmagine: row[4]
+                // Aggiungi qui altri campi se necessario
+            };
+            jsonArray.push(obj);
+        }
     }
     return jsonArray;
 }
 
 function populateMenu(data) {
     const menuContainer = document.getElementById('menu-container');
-    menuContainer.innerHTML = ''; // Pulisce il contenitore del menu prima di popolarlo
+    menuContainer.innerHTML = '';
 
     data.forEach(product => {
-        if(product.Prodotto && product.C) { // Si assuma che la colonna C contenga i prezzi
+        if (product.Prodotto && product.Prezzo) {
             const productElement = document.createElement('div');
             productElement.className = 'product-item';
 
@@ -42,12 +53,27 @@ function populateMenu(data) {
 
             const priceElement = document.createElement('span');
             priceElement.className = 'product-price';
-            priceElement.textContent = product.C; // Adattare in base alla colonna corretta se diversa
+            priceElement.textContent = product.Prezzo;
             productElement.appendChild(priceElement);
 
-            // Aggiungi qui altre proprietà come descrizione e immagine se necessario
+            if (product.Descrizione) {
+                const descriptionElement = document.createElement('p');
+                descriptionElement.textContent = product.Descrizione;
+                productElement.appendChild(descriptionElement);
+            }
+
+            if (product.LinkImmagine) {
+                const imageElement = document.createElement('img');
+                imageElement.className = 'product-image';
+                imageElement.src = convertDropboxUrlToDirect(product.LinkImmagine);
+                productElement.appendChild(imageElement);
+            }
 
             menuContainer.appendChild(productElement);
         }
     });
+}
+
+function convertDropboxUrlToDirect(url) {
+    return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
 }
