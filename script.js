@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTDFooGfjHhcaYpQFBG2Rlviu-Jd87Ke7VnjDYNieHZMDGMqcb2du83VBA6XNR1KjiDkbV6oVxUvN1Q/pub?output=csv')
     .then(response => response.text())
     .then(data => {
+        console.log('CSV Data:', data);
         const jsonData = csvToJSON(data);
+        console.log('JSON Data:', jsonData);
         populateMenu(jsonData);
     })
     .catch(error => console.error('Error loading the CSV data:', error));
