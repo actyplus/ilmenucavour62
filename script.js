@@ -7,53 +7,62 @@ function fetchCSVAndDisplay(url, containerId) {
     .then(response => response.text())
     .then(csvText => {
         const jsonData = csvToJSON(csvText);
-        populateMenu(jsonData, containerId);
+        const groupedData = groupBySection(jsonData);
+        populateMenu(groupedData, containerId);
     })
     .catch(error => console.error('Error fetching or converting the CSV:', error));
 }
 
 function csvToJSON(csvText) {
-    const lines = csvText.split('\n');
-    const keys = lines[0].split(',').map(key => key.trim());
-    // Skip empty lines and headers
-    return lines.slice(1).filter(line => line).map(line => {
-        const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(value => value.trim().replace(/^"|"$/g, ''));
-        return keys.reduce((object, key, index) => {
-            object[key] = values[index];
-            return object;
+    const lines = csvText.split('\n').map(line => line.trim()).filter(line => line);
+    const headers = lines[0].split(',').map(header => header.trim());
+    return lines.slice(1).map(line => {
+        const values = line.split(',').map(value => value.trim().replace(/^"|"$/g, ''));
+        return headers.reduce((obj, header, index) => {
+            obj[header] = values[index];
+            return obj;
         }, {});
     });
 }
 
-function populateMenu(items, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = ''; // Clear the container
+function groupBySection(items) {
+    return items.reduce((acc, item) => {
+        (acc[item['Sezione']] = acc[item['Sezione']] || []).push(item);
+        return acc;
+    }, {});
+}
 
-    items.forEach(item => {
-        if (item.Prodotto && item.Sezione !== '') { // Check if the row is a product entry
+function populateMenu(groupedItems, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+
+    Object.keys(groupedItems).forEach(section => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = 'section';
+
+        const sectionTitle = document.createElement('h2');
+        sectionTitle.textContent = section;
+        sectionDiv.appendChild(sectionTitle);
+
+        groupedItems[section].forEach(item => {
             const productDiv = document.createElement('div');
             productDiv.className = 'product';
-            
-            const nameElement = document.createElement('h3');
-            nameElement.textContent = item.Prodotto;
-            productDiv.appendChild(nameElement);
 
-            const priceElement = document.createElement('p');
-            priceElement.textContent = item.Prezzo;
-            productDiv.appendChild(priceElement);
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = item['Prodotto'];
+            productDiv.appendChild(nameSpan);
 
-            const descriptionElement = document.createElement('p');
-            descriptionElement.textContent = item.Descrizione;
-            productDiv.appendChild(descriptionElement);
+            const priceSpan = document.createElement('span');
+            priceSpan.textContent = item['Prezzo'];
+            productDiv.appendChild(priceSpan);
 
-            if (item.LinkImmagine) {
-                const imageElement = document.createElement('img');
-                imageElement.src = item.LinkImmagine;
-                imageElement.alt = item.Prodotto;
-                productDiv.appendChild(imageElement);
-            }
+            const descSpan = document.createElement('span');
+            descSpan.textContent = item['Descrizione'];
+            productDiv.appendChild(descSpan);
 
-            container.appendChild(productDiv);
-        }
+            sectionDiv.appendChild(productDiv);
+        });
+
+        container.appendChild(sectionDiv);
     });
 }
